@@ -51,7 +51,7 @@
             color: white;
         }
 
-        #resetButton, #logoutButton {
+        #resetButton, #logoutButton, #activateBuzzerButton {
             padding: 10px 20px;
             margin: 20px 10px;
             font-size: 14px;
@@ -67,6 +67,16 @@
 
         #logoutButton {
             background: #FF5733;
+            color: white;
+        }
+
+        #activateBuzzerButton {
+            background: #FFC107;
+            color: white;
+        }
+
+        #deactivateButton {
+            background: #FF5722;
             color: white;
         }
     </style>
@@ -93,6 +103,8 @@
         </table>
 
         <button id="resetButton" onclick="resetBuzzer()">Reset Buzzers</button>
+        <button id="activateBuzzerButton" onclick="activateBuzzer()">Activate Buzzer</button>
+        <button id="deactivateButton" onclick="deactivateBuzzer()" style="display: none;">Deactivate Buzzer</button>
         <button id="logoutButton" onclick="handleLogout()">Logout</button>
     </div>
 
@@ -103,6 +115,7 @@
 
         const leaderboardBody = document.getElementById("leaderboardBody");
         let buzzerData = [];
+        let buzzerActivated = false; // Track if the buzzer is activated
 
         // ✅ Listen for buzzerPressed event from the server
         socket.on("buzzerPressed", (data) => {
@@ -141,6 +154,26 @@
         function resetBuzzer() {
             socket.emit("resetBuzzer");
             console.log("📣 Reset event sent to server.");
+        }
+
+        // 🚨 Activate Buzzer (enable for teams)
+        function activateBuzzer() {
+            if (!buzzerActivated) {
+                socket.emit("activateBuzzer"); // Emit event to activate the buzzer
+                buzzerActivated = true;
+                document.getElementById("activateBuzzerButton").style.display = "none"; // Hide the button after activation
+                document.getElementById("deactivateButton").style.display = "inline-block"; // Show deactivate button
+                console.log("📣 Buzzer activated for teams to use.");
+            }
+        }
+
+        // 🛑 Deactivate Buzzer (disable buzzer for teams)
+        function deactivateBuzzer() {
+            socket.emit("deactivateBuzzer"); // Emit event to deactivate the buzzer
+            buzzerActivated = false;
+            document.getElementById("deactivateButton").style.display = "none"; // Hide deactivate button
+            document.getElementById("activateBuzzerButton").style.display = "inline-block"; // Show activate button
+            console.log("📣 Buzzer deactivated.");
         }
 
         // 🔐 Handle Admin Logout
