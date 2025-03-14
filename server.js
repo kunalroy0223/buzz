@@ -17,8 +17,13 @@ const io = new Server(server, {
 let buzzerData = [];  // Array to store buzzer data with team name and timestamp
 let buzzerActive = false; // Track if the buzzer is active or not
 
-// Serve static files
+// Serve static files from the "public" folder
 app.use(express.static('public'));
+
+// Serve the root (index) page
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 
 // Listen for socket connections
 io.on('connection', (socket) => {
@@ -66,11 +71,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`Disconnected: ${socket.id}`);
   });
-});
-
-// Serve login page
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/Login.html');
 });
 
 // Start the server

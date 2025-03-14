@@ -10,7 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 
     <style>
-        /* Center the buzzer container */
         .buzzer-container {
             position: absolute;
             top: 50%;
@@ -48,7 +47,7 @@
             font-size: 2rem;
             margin-top: 20px;
             color: #ff4500;
-            display: none; /* Initially hidden */
+            display: none;
         }
     </style>
 </head>
@@ -68,7 +67,7 @@
         </ul>
     </nav>
 
-    <!-- Buzzer Section (Centered) -->
+    <!-- Buzzer Section -->
     <div class="buzzer-container">
         <h1>Press the Buzzer!</h1>
         <button id="buzzer" class="buzzer-btn" onclick="pressBuzzer()" disabled>🔔 Buzz!</button>
@@ -87,36 +86,33 @@
         hamburger.classList.toggle('toggle');
     });
 
-    function closeMenu() {
-        navLinks.classList.remove('open');
-        hamburger.classList.remove('toggle');
-    }
-
-    // ✅ Initialize Socket.io (Ensure your server is running on port 3000)
-const socket = io(
-  window.location.hostname === 'localhost'
-    ? 'http://localhost:3000' // Local development
-    : 'https://quickbuzz-dtle.onrender.com' // Deployed backend
-);
+    // ✅ Initialize Socket.io (Ensure your server is running correctly)
+    const socket = io(
+        window.location.hostname === 'localhost'
+            ? 'http://localhost:3000' // Local development
+            : 'https://quickbuzz-dtle.onrender.com' // Deployed backend
+    );
 
     // ✅ Fetch Team Data from Session Storage
     const teamName = sessionStorage.getItem('teamName') || "Team_X";
     document.getElementById('teamNameDisplay').textContent = `Team: ${teamName}`;
 
-    // ✅ Stopwatch Variables
+    // Stopwatch Variables
     let buzzerPressed = false;
-    let startTime = performance.now();
-    let elapsedTime = 0;
+    let startTime = 0;
     let stopwatchInterval;
 
     // ⏱️ Start Stopwatch only when Buzzer is Active
     function startStopwatch() {
+        startTime = performance.now();
+        document.getElementById('stopwatch').style.display = 'block';
+
         stopwatchInterval = setInterval(() => {
             if (!buzzerPressed) {
-                const currentTime = performance.now() - startTime + elapsedTime;
-                document.getElementById('stopwatch').textContent = `⏱️ ${Math.floor(currentTime)} ms`;
+                const elapsedTime = performance.now() - startTime;
+                document.getElementById('stopwatch').textContent = `⏱️ ${Math.floor(elapsedTime)} ms`;
             }
-        }, 1); // Update every millisecond
+        }, 1);
     }
 
     // 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
@@ -126,44 +122,39 @@ const socket = io(
         buzzerPressed = true;
         document.getElementById('buzzer').disabled = true;
 
-        const currentTime = performance.now() - startTime + elapsedTime; // High precision stopwatch
-        document.getElementById('buzzerStatus').textContent = `⏳ Buzzer Pressed at ${Math.floor(currentTime)} ms!`;
+        // 🛢️ Send Data to Backend (server handles the timestamp for accuracy)
+        socket.emit('buzzerPressed', { teamName });
 
-        // 🛢️ Send Data to Backend via Socket.io (No Firestore)
-        socket.emit('buzzerPressed', { teamName, timestamp: Math.floor(currentTime) });
-
-        console.log(`✅ Sent buzzer data: Team - ${teamName}, Time - ${Math.floor(currentTime)} ms`);
+        document.getElementById('buzzerStatus').textContent = `⏳ Buzzer Pressed! Waiting for confirmation...`;
+        clearInterval(stopwatchInterval);
     }
 
-    // 🔄 Listen for Reset Event from Admin (Reset Stopwatch and Buzzer)
+    // 🔄 Listen for Reset Event from Admin
     socket.on('resetBuzzer', () => {
         buzzerPressed = false;
-        elapsedTime = 0; // Reset the elapsed time
-        startTime = performance.now(); // Reset stopwatch
-        document.getElementById('buzzer').disabled = true; // Disable buzzer
+        document.getElementById('buzzer').disabled = true;
         document.getElementById('buzzerStatus').textContent = '✅ Waiting for Admin to activate buzzer!';
-        document.getElementById('stopwatch').style.display = 'none'; // Hide stopwatch initially
+        document.getElementById('stopwatch').style.display = 'none';
+        clearInterval(stopwatchInterval);
     });
 
-    // 🔄 Listen for Activate Buzzer Event from Admin (Enable the buzzer and start stopwatch)
+    // 🔄 Listen for Activate Buzzer Event from Admin
     socket.on('activateBuzzer', () => {
-        document.getElementById('buzzer').disabled = false; // Enable buzzer when admin activates it
+        buzzerPressed = false;
+        document.getElementById('buzzer').disabled = false;
         document.getElementById('buzzerStatus').textContent = '✅ Ready to buzz!';
-        buzzerPressed = false; // Reset buzzer press status
-        startTime = performance.now(); // Reset stopwatch
-        document.getElementById('stopwatch').style.display = 'block'; // Show stopwatch
-        startStopwatch(); // Start the stopwatch
+        startStopwatch();
     });
 
-    // 🔄 Listen for Deactivate Buzzer Event from Admin (Disable the buzzer)
+    // 🔄 Listen for Deactivate Buzzer Event from Admin
     socket.on('deactivateBuzzer', () => {
-        document.getElementById('buzzer').disabled = true; // Disable buzzer when admin deactivates it
+        buzzerPressed = true;
+        document.getElementById('buzzer').disabled = true;
         document.getElementById('buzzerStatus').textContent = '❌ Buzzer Deactivated by Admin!';
-        document.getElementById('stopwatch').style.display = 'none'; // Hide stopwatch
-        buzzerPressed = true; // Prevent further buzzer presses
+        clearInterval(stopwatchInterval);
     });
 
-    // 🔒 Logout Function (Clear Session Storage)
+    // 🔒 Logout Function
     function logout() {
         sessionStorage.clear();
         window.location.href = 'index.html';
