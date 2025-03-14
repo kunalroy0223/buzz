@@ -93,7 +93,11 @@
     }
 
     // ✅ Initialize Socket.io (Ensure your server is running on port 3000)
-    const socket = io('http://localhost:3000');
+const socket = io(
+  window.location.hostname === 'localhost'
+    ? 'http://localhost:3000' // Local development
+    : 'https://quickbuzz-dtle.onrender.com' // Deployed backend
+);
 
     // ✅ Fetch Team Data from Session Storage
     const teamName = sessionStorage.getItem('teamName') || "Team_X";
