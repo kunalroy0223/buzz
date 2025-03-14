@@ -9,13 +9,14 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://127.0.0.1:5500",  // Allow the admin panel's origin
+    origin: "http://127.0.0.1:5500", // Allow admin panel origin (adjust if needed)
     methods: ["GET", "POST"]
   }
 });
 
-let buzzerData = [];  // Array to store buzzer data with team name and timestamp
-let buzzerActive = false; // Track if the buzzer is active or not
+let buzzerData = [];         // Store buzzer data (teamName, timestamp)
+let buzzerActive = false;    // Track if buzzer is active
+let connectedTeams = new Map(); // Track connected teams
 
 // Serve static files from the "public" folder
 app.use(express.static('public'));
@@ -25,55 +26,70 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-// Listen for socket connections
+// 🔌 Handle socket connections
 io.on('connection', (socket) => {
-  console.log(`New connection: ${socket.id}`);
+  console.log(`🔌 New connection: ${socket.id}`);
 
-  // Send current buzzer state (active/inactive) to the new client
+  // Send current buzzer state and connected teams to the new client
   socket.emit('buzzerState', buzzerActive);
+  io.emit('updateConnectedTeams', Array.from(connectedTeams.values()));
 
-  // Handle buzzer pressed event
+  // ✅ Register Team (for tracking connected teams)
+  socket.on('registerTeam', (teamName) => {
+    connectedTeams.set(socket.id, teamName);
+    console.log(`✅ Team Registered: ${teamName}`);
+    io.emit('updateConnectedTeams', Array.from(connectedTeams.values()));
+  });
+
+  // 🛎️ Handle buzzer press (if active)
   socket.on('buzzerPressed', (data) => {
-    if (buzzerActive) {  // Only register buzzer presses when the buzzer is active
-      console.log(`Buzzer Pressed by ${data.teamName}`);
-      const timestamp = performance.now();
-      const buzzerEntry = { teamName: data.teamName, timestamp: timestamp.toFixed(4) };
-      buzzerData.push(buzzerEntry);  // Store buzzer data
-      console.log(`Buzzer data: `, buzzerEntry);
+    if (!buzzerActive) return; // Ignore if buzzer inactive
 
-      // Emit buzzer update to all clients (teams and admin)
-      io.emit('buzzerUpdate', buzzerEntry);
-    }
+    const { teamName } = data;
+    const timestamp = performance.now();
+    const buzzerEntry = { teamName, timestamp: timestamp.toFixed(4) };
+
+    buzzerData.push(buzzerEntry);
+    console.log(`🚨 Buzzer Pressed by ${teamName} at ${timestamp.toFixed(4)} ms`);
+
+    // Emit buzzer event to all clients (teams & admin)
+    io.emit('buzzerUpdate', buzzerEntry);
   });
 
-  // Handle reset buzzer event (reset buzzer for all teams)
+  // 🔄 Admin: Reset Buzzer
   socket.on('resetBuzzer', () => {
-    console.log('Buzzer Reset by Admin');
-    buzzerData = [];  // Reset the buzzer data
-    io.emit('resetBuzzer');  // Broadcast the reset to all clients
+    console.log('🔄 Buzzer Reset by Admin');
+    buzzerData = []; // Clear buzzer data
+    io.emit('resetBuzzer');
   });
 
-  // Handle activate buzzer event (admin activates the buzzer)
+  // ✅ Admin: Activate Buzzer
   socket.on('activateBuzzer', () => {
-    console.log('Buzzer Activated by Admin');
-    buzzerActive = true;  // Set buzzer as active
-    io.emit('activateBuzzer');  // Broadcast the activation to all clients
+    console.log('✅ Buzzer Activated by Admin');
+    buzzerActive = true;
+    io.emit('activateBuzzer');
   });
 
-  // Handle deactivate buzzer event (admin deactivates the buzzer)
+  // ❌ Admin: Deactivate Buzzer
   socket.on('deactivateBuzzer', () => {
-    console.log('Buzzer Deactivated by Admin');
-    buzzerActive = false;  // Set buzzer as inactive
-    io.emit('deactivateBuzzer');  // Broadcast the deactivation to all clients
+    console.log('❌ Buzzer Deactivated by Admin');
+    buzzerActive = false;
+    io.emit('deactivateBuzzer');
   });
 
-  // Handle disconnection
+  // 🔌 Handle Team Disconnection
   socket.on('disconnect', () => {
-    console.log(`Disconnected: ${socket.id}`);
+    const teamName = connectedTeams.get(socket.id);
+    if (teamName) {
+      console.log(`❌ Team Disconnected: ${teamName}`);
+      connectedTeams.delete(socket.id);
+      io.emit('updateConnectedTeams', Array.from(connectedTeams.values()));
+    }
+    console.log(`🔴 Disconnected: ${socket.id}`);
   });
 });
 
-// Start the server
+// 🚀 Start the server
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

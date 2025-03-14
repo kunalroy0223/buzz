@@ -5,17 +5,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team Dashboard</title>
-    <link rel="stylesheet" href="Team_dash.css">
     <link rel="shortcut icon" href="bell.png" type="image/x-icon">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <style>
-        .buzzer-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        .navbar {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
             text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logout-button {
+            float: right;
+            margin-right: 20px;
+            padding: 8px 16px;
+            background: #FF5733;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .buzzer-container {
+            text-align: center;
+            margin-top: 50px;
         }
 
         .buzzer-btn {
@@ -54,112 +81,97 @@
 
 <body>
 
-<div class="background">
-    <nav class="navbar">
-        <div class="teamName" id="teamNameDisplay"></div>
-        <div class="hamburger" id="hamburger">
-            <div class="line1"></div>
-            <div class="line2"></div>
-            <div class="line3"></div>
-        </div>
-        <ul class="nav-links" id="navLinks">
-            <li><button class="join-button" onclick="logout()">Logout</button></li>
-        </ul>
-    </nav>
+    <!-- Navbar -->
+    <div class="navbar">
+        <span id="teamNameDisplay">Team Dashboard</span>
+        <button class="logout-button" onclick="logout()">Logout</button>
+    </div>
 
     <!-- Buzzer Section -->
     <div class="buzzer-container">
         <h1>Press the Buzzer!</h1>
         <button id="buzzer" class="buzzer-btn" onclick="pressBuzzer()" disabled>🔔 Buzz!</button>
-        <p id="buzzerStatus">Waiting to buzz...</p>
+        <p id="buzzerStatus">Waiting for admin to activate...</p>
         <div id="stopwatch">⏱️ 0 ms</div>
     </div>
-</div>
 
-<script>
-    // ✅ Toggle Mobile Menu
-    const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('navLinks');
+    <script>
+        // ✅ Initialize Socket.io (Local or Deployed Environment)
+        const socket = io(
+            window.location.hostname === 'localhost'
+                ? 'http://localhost:3000'
+                : 'https://quickbuzz-dtle.onrender.com'
+        );
 
-    hamburger.addEventListener('click', () => {
-        navLinks.classList.toggle('open');
-        hamburger.classList.toggle('toggle');
-    });
+        // ✅ Fetch Team Data from Session Storage
+        const teamName = sessionStorage.getItem('teamName') || "Team_X";
+        document.getElementById('teamNameDisplay').textContent = `Team: ${teamName}`;
 
-    // ✅ Initialize Socket.io (Ensure your server is running correctly)
-    const socket = io(
-        window.location.hostname === 'localhost'
-            ? 'http://localhost:3000' // Local development
-            : 'https://quickbuzz-dtle.onrender.com' // Deployed backend
-    );
+        // Stopwatch Variables
+        let buzzerPressed = false;
+        let startTime = 0;
+        let stopwatchInterval;
 
-    // ✅ Fetch Team Data from Session Storage
-    const teamName = sessionStorage.getItem('teamName') || "Team_X";
-    document.getElementById('teamNameDisplay').textContent = `Team: ${teamName}`;
+        // ⏱️ Start Stopwatch when Buzzer is Active
+        function startStopwatch() {
+            startTime = performance.now();
+            const stopwatch = document.getElementById('stopwatch');
+            stopwatch.style.display = 'block';
 
-    // Stopwatch Variables
-    let buzzerPressed = false;
-    let startTime = 0;
-    let stopwatchInterval;
+            stopwatchInterval = setInterval(() => {
+                if (!buzzerPressed) {
+                    const elapsedTime = performance.now() - startTime;
+                    stopwatch.textContent = `⏱️ ${Math.floor(elapsedTime)} ms`;
+                }
+            }, 1);
+        }
 
-    // ⏱️ Start Stopwatch only when Buzzer is Active
-    function startStopwatch() {
-        startTime = performance.now();
-        document.getElementById('stopwatch').style.display = 'block';
+        // 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
+        function pressBuzzer() {
+            if (buzzerPressed) return;
 
-        stopwatchInterval = setInterval(() => {
-            if (!buzzerPressed) {
-                const elapsedTime = performance.now() - startTime;
-                document.getElementById('stopwatch').textContent = `⏱️ ${Math.floor(elapsedTime)} ms`;
-            }
-        }, 1);
-    }
+            buzzerPressed = true;
+            document.getElementById('buzzer').disabled = true;
 
-    // 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
-    function pressBuzzer() {
-        if (buzzerPressed) return; // Prevent multiple clicks
+            // Send Data to Backend
+            socket.emit('buzzerPressed', { teamName });
 
-        buzzerPressed = true;
-        document.getElementById('buzzer').disabled = true;
+            document.getElementById('buzzerStatus').textContent = '⏳ Buzzer Pressed! Waiting for admin...';
+            clearInterval(stopwatchInterval);
+        }
 
-        // 🛢️ Send Data to Backend (server handles the timestamp for accuracy)
-        socket.emit('buzzerPressed', { teamName });
+        // 🔄 Listen for Reset Event from Admin
+        socket.on('resetBuzzer', () => {
+            buzzerPressed = false;
+            document.getElementById('buzzer').disabled = true;
+            document.getElementById('buzzerStatus').textContent = '🔁 Waiting for admin to activate buzzer!';
+            document.getElementById('stopwatch').style.display = 'none';
+            clearInterval(stopwatchInterval);
+        });
 
-        document.getElementById('buzzerStatus').textContent = `⏳ Buzzer Pressed! Waiting for confirmation...`;
-        clearInterval(stopwatchInterval);
-    }
+        // 🔄 Listen for Activate Buzzer Event from Admin
+        socket.on('activateBuzzer', () => {
+            buzzerPressed = false;
+            document.getElementById('buzzer').disabled = false;
+            document.getElementById('buzzerStatus').textContent = '✅ Ready to buzz!';
+            startStopwatch();
+        });
 
-    // 🔄 Listen for Reset Event from Admin
-    socket.on('resetBuzzer', () => {
-        buzzerPressed = false;
-        document.getElementById('buzzer').disabled = true;
-        document.getElementById('buzzerStatus').textContent = '✅ Waiting for Admin to activate buzzer!';
-        document.getElementById('stopwatch').style.display = 'none';
-        clearInterval(stopwatchInterval);
-    });
+        // 🔄 Listen for Deactivate Buzzer Event from Admin
+        socket.on('deactivateBuzzer', () => {
+            buzzerPressed = true;
+            document.getElementById('buzzer').disabled = true;
+            document.getElementById('buzzerStatus').textContent = '❌ Buzzer Deactivated by Admin!';
+            clearInterval(stopwatchInterval);
+        });
 
-    // 🔄 Listen for Activate Buzzer Event from Admin
-    socket.on('activateBuzzer', () => {
-        buzzerPressed = false;
-        document.getElementById('buzzer').disabled = false;
-        document.getElementById('buzzerStatus').textContent = '✅ Ready to buzz!';
-        startStopwatch();
-    });
-
-    // 🔄 Listen for Deactivate Buzzer Event from Admin
-    socket.on('deactivateBuzzer', () => {
-        buzzerPressed = true;
-        document.getElementById('buzzer').disabled = true;
-        document.getElementById('buzzerStatus').textContent = '❌ Buzzer Deactivated by Admin!';
-        clearInterval(stopwatchInterval);
-    });
-
-    // 🔒 Logout Function
-    function logout() {
-        sessionStorage.clear();
-        window.location.href = 'index.html';
-    }
-</script>
+        // 🔒 Logout Function
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
 
 </body>
+
 </html>

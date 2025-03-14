@@ -122,7 +122,7 @@
         let buzzerData = [];
         let buzzerActivated = false; // Track if the buzzer is activated
 
-        // ✅ Listen for buzzerUpdate event (corrected)
+        // ✅ Listen for buzzerUpdate event (with timestamp)
         socket.on("buzzerUpdate", (data) => {
             console.log("🔔 Buzzer Data Received:", data);
 
@@ -140,7 +140,7 @@
             updateLeaderboard();
         });
 
-        // 🛠️ Update the leaderboard dynamically
+        // 📊 Update the leaderboard with formatted time
         function updateLeaderboard() {
             leaderboardBody.innerHTML = "";
 
@@ -153,10 +153,15 @@
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${teamName}</td>
-                    <td>${timestamp} ms</td>
+                    <td>⏱️ ${formatTime(timestamp)}</td>
                 `;
                 leaderboardBody.appendChild(row);
             });
+        }
+
+        // ⏳ Helper: Format time (e.g., 1010 ms)
+        function formatTime(ms) {
+            return `${ms} ms`;
         }
 
         // 🛑 Reset Buzzer (admin control)
