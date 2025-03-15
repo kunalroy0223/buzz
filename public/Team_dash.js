@@ -1,4 +1,4 @@
-        // ✅ Initialize Socket.io (Local or Deployed Environment)
+// ✅ Initialize Socket.io (Local or Deployed Environment)
         const socket = io(
             window.location.hostname === 'localhost'
                 ? 'http://localhost:3000'
@@ -6,8 +6,8 @@
         );
 
         // ✅ Fetch Team Data from Session Storage
-        const teamName = sessionStorage.getItem('teamName') || "Team_X ✅";
-        document.getElementById('teamNameDisplay').textContent = `Team: ${teamName} ✅`;
+        const teamName = sessionStorage.getItem('teamName') || "Team_X ";
+        document.getElementById('teamNameDisplay').textContent = `Team: ${teamName} `;
 
         // Stopwatch Variables
 let buzzerPressed = false;
@@ -32,14 +32,20 @@ let buzzerPressed = false;
 
     startStopwatch();
 
-    // 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
-    function pressBuzzer() {
-        if (buzzerPressed) return;
-        buzzerPressed = true;
-        const exactTime = currentDisplayedTime;
-        document.getElementById('buzzerStatus').textContent = `⏳ Buzzer Pressed at ${exactTime} ms!`;
-        socket.emit('buzzerPressed', { teamName, timestamp: exactTime });
-    }
+// 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
+function pressBuzzer() {
+    if (buzzerPressed) return; // Ensure sound and event only trigger once
+
+    // Play buzzer sound only if active
+    const buzzerSound = new Audio('buzz.wav');
+    buzzerSound.play();
+
+    buzzerPressed = true;
+    const exactTime = currentDisplayedTime; // Ensure this is updated correctly
+    document.getElementById('buzzerStatus').textContent = `⏳ Buzzer Pressed at ${exactTime} ms!`;
+    socket.emit('buzzerPressed', { teamName, timestamp: exactTime });
+}
+
 
 
         // 🔄 Listen for Reset Event from Admin
@@ -50,30 +56,42 @@ let buzzerPressed = false;
             document.getElementById('stopwatch').style.display = 'none';
         });
 
-        // 🔄 Listen for Activate Buzzer Event from Admin
-        // Show stopwatch when buzzer is activated
+// 📢 Listen for Admin Activation (Enable Buzzer)
 socket.on("activateBuzzer", () => {
-    document.getElementById("stopwatch").style.display = "block"; // Ensure stopwatch is visible
-    buzzerPressed = false;
+    // Ensure stopwatch is visible and buzzer is active
+    document.getElementById("stopwatch").style.display = "block";
+    buzzerPressed = false; // Allow new buzz
     document.getElementById("buzzer").disabled = false;
     document.getElementById("buzzerStatus").textContent = "✅ Ready to buzz!";
-    startStopwatch(); // Start the stopwatch
+    startStopwatch(); // Start stopwatch
 });
 
-
-        // 🔄 Listen for Deactivate Buzzer Event from Admin
+// 🔕 Listen for Admin Deactivation (Disable Buzzer)
 socket.on("deactivateBuzzer", () => {
-    buzzerPressed = true; // Stop stopwatch loop
+    buzzerPressed = true; // Stop further buzzer presses
     document.getElementById("buzzer").disabled = true;
     document.getElementById("buzzerStatus").textContent = "❌ Buzzer Deactivated by Admin!";
 });
+// ✅ Toggle Mobile Menu
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('navLinks');
 
+hamburger.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    hamburger.classList.toggle('toggle');
+});
 
-        // 🔒 Logout Function
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
+function closeMenu() {
+    navLinks.classList.remove('open');
+    hamburger.classList.remove('toggle');
+}
+
+// 🔒 Logout Function
+function logout() {
+    sessionStorage.clear();
+    window.location.href = 'index.html';
+}
+
         // 🔄 Listen for leaderboard updates from the server
 // 🔄 Listen for leaderboard updates from the server
 socket.on("updateLeaderboard", (leaderboard) => {
@@ -88,14 +106,6 @@ socket.on("updateLeaderboard", (leaderboard) => {
 });
 // 🔄 Listen for position update from the server
 // Listen for your position and update the UI
-// ✅ Listen for yourPosition event and display it
-socket.on("yourPosition", (data) => {
-    console.log("📊 Position Received:", data);
-    if (data.teamName === teamName) {
-        document.getElementById('buzzerStatus').textContent = `🎉 Your Position: ${data.position}`;
-    }
+socket.on('yourPosition', (position) => {
+    document.getElementById('buzzerStatus').textContent = `🎉 Your Position: ${position}`;
 });
-
-
-
-

@@ -1,94 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="shortcut icon" href="bell.png" type="image/x-icon">
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-            background: #f5f5f5;
-            display: flex;
-            height: 100vh;
-        }
-
-        .left-section {
-            flex: 2;
-            padding: 20px;
-            background: #fff;
-            border-right: 1px solid #ddd;
-        }
-
-        .right-section {
-            flex: 1;
-            padding: 20px;
-            background: #fafafa;
-        }
-
-        h1, h2 {
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: #4CAF50;
-            color: white;
-        }
-
-        #resetButton, #logoutButton, #activateBuzzerButton, #deactivateButton {
-            padding: 10px 20px;
-            margin: 20px 10px;
-            font-size: 14px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        #resetButton {
-            background: #2196F3;
-            color: white;
-        }
-
-        #logoutButton {
-            background: #FF5733;
-            color: white;
-        }
-
-        #activateBuzzerButton {
-            background: #FFC107;
-            color: white;
-        }
-
-        #deactivateButton {
-            background: #FF5722;
-            color: white;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="Admin_dash.css">
 </head>
-
 <body>
-    <div class="left-section">
-        <h1>Admin Dashboard</h1>
-    </div>
+    <!-- Main Quiz Section -->
+<div class="quiz-section">
+    <div class="quiz-container">
+        <div class="question-header">
+            <div class="question-number" id="question-number">Question 1/10</div>
+        </div>
 
-    <div class="right-section">
-        <h2>Leaderboard</h2>
+        <!-- 🔹 Carousel Section (With Next & Prev Buttons) -->
+        <div class="question-image-container">
+            <button class="nav-btn prev-btn" onclick="prevQuestion()">&#10094;</button>
+            <img id="questionImage" src="images/default.jpg" alt="Question Image">
+            <button class="nav-btn next-btn" onclick="nextQuestion()">&#10095;</button>
+        </div>
+
+        <!-- 🔹 Question Text -->
+        <div class="question-text"></div>
+    </div>
+</div>
+
+<!-- Right Control Section -->
+<div class="control-section">
+    <div class="leaderboard-card">
+        <h2 style="margin: 0 0 1.5rem; color: var(--accent-color);">
+            <i class="fas fa-trophy"></i> Leaderboard
+        </h2>
         <table id="leaderboard">
             <thead>
                 <tr>
@@ -101,132 +47,24 @@
                 <!-- Buzzer Data will be populated here -->
             </tbody>
         </table>
-
-        <button id="resetButton" onclick="resetBuzzer()">Reset Buzzers</button>
-        <button id="activateBuzzerButton" onclick="activateBuzzer()">Activate Buzzer</button>
-        <button id="deactivateButton" onclick="deactivateBuzzer()" style="display: none;">Deactivate Buzzer</button>
-        <button id="logoutButton" onclick="handleLogout()">Logout</button>
     </div>
 
-    <!-- Socket.io -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-        // Initialize Socket.IO Connection
-        const socket = io(
-            window.location.hostname === 'localhost'
-                ? 'http://localhost:3000'  // Local development
-                : 'https://quickbuzz-dtle.onrender.com'  // Deployed backend
-        );
-
-        const leaderboardBody = document.getElementById("leaderboardBody");
-        let buzzerData = [];
-        let buzzerActivated = false; // Track buzzer state
-
-        // ✅ Listen for buzzer press event
- socket.on("buzzerUpdate", (data) => {
-    console.log("🔔 Buzzer Data Received:", data);
-
-    // Avoid duplicate entries by checking teamName
-    if (!buzzerData.some(item => item.teamName === data.teamName)) {
-        buzzerData.push(data);
-        updateLeaderboard();
-
-        // Calculate and send individual team positions
-        broadcastTeamPositions();
-    }
-});
-
-        // ✅ Listen for reset event
-        socket.on("resetBuzzer", () => {
-            console.log("🔄 Buzzers Reset");
-            buzzerData = [];
-            updateLeaderboard();
-        });
-
-        // 📊 Update the leaderboard with position tracking
-function updateLeaderboard() {
-    leaderboardBody.innerHTML = "";
-
-    // Sort teams by buzzer press time (ascending)
-    buzzerData.sort((a, b) => a.timestamp - b.timestamp);
-
-    buzzerData.forEach((item, index) => {
-        const { teamName, timestamp } = item;
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${index + 1}</td> <!-- Position starts from 1 -->
-            <td>${teamName}</td>
-            <td>⏱️ ${timestamp} ms</td>
-        `;
-        leaderboardBody.appendChild(row);
-    });
-
-    // Emit updated leaderboard to all clients
-    socket.emit("updateLeaderboard", buzzerData);
-}
-
-// 📢 Broadcast team positions to each client
-// 📢 Broadcast team positions to each client
-// 📊 Broadcast team positions to each client
-function broadcastTeamPositions() {
-  if (!buzzerData.length) return; // Ensure there's data to process
-
-  try {
-    // Sort teams by their timestamp (ascending order means fastest first)
-    buzzerData.sort((a, b) => a.timestamp - b.timestamp);
-
-    buzzerData.forEach((item, index) => {
-      if (item.teamName) {
-        console.log(`📤 Sending position: ${index + 1} to ${item.teamName}`);
-        io.emit('yourPosition', { teamName: item.teamName, position: index + 1 });
-      }
-    });
-  } catch (error) {
-    console.error("❌ Error broadcasting positions:", error);
-  }
-}
-
-
-// 🛑 Reset Buzzer (admin control)
-function resetBuzzer() {
-    socket.emit("resetBuzzer");
-    buzzerData = [];
-    updateLeaderboard();
-    console.log("📣 Reset event sent to server.");
-}
-
-// 🚨 Activate Buzzer (enable for teams)
-function activateBuzzer() {
-    if (!buzzerActivated) {
-        socket.emit("activateBuzzer");
-        buzzerActivated = true;
-        toggleBuzzerButtons(true);
-        console.log("📣 Buzzer activated for teams.");
-    }
-}
-
-// 🛑 Deactivate Buzzer (disable for teams)
-function deactivateBuzzer() {
-    if (buzzerActivated) {
-        socket.emit("deactivateBuzzer");
-        buzzerActivated = false;
-        toggleBuzzerButtons(false);
-        console.log("📣 Buzzer deactivated.");
-    }
-}
-
-// 🔘 Toggle Buzzer Activation/Deactivation Buttons
-function toggleBuzzerButtons(active) {
-    document.getElementById("activateBuzzerButton").style.display = active ? "none" : "inline-block";
-    document.getElementById("deactivateButton").style.display = active ? "inline-block" : "none";
-}
-
-// 🔐 Handle Admin Logout
-function handleLogout() {
-    window.location.href = "index.html";
-}
-    </script>
-
+    <div class="control-buttons">
+        <button class="btn btn-buzzer" id="activateBuzzerButton" onclick="activateBuzzer()"">
+            <i class="fas fa-satellite"></i>
+            <span>Activate Buzzer</span>
+        </button>
+        <button id="deactivateButton" onclick="deactivateBuzzer()" style="display: none;">Deactivate Buzzer</button>
+        <button class="btn btn-reset" onclick="resetBuzzer()">
+            <i class="fas fa-sync-alt"></i>
+            Reset Buzzers
+        </button>
+        <button class="btn btn-logout" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+        </button>
+    </div>
+</div>
+<script src="Admin_dash.js"></script>
 </body>
-
 </html>

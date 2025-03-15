@@ -112,3 +112,123 @@ function toggleBuzzerButtons(active) {
 function handleLogout() {
     window.location.href = "index.html";
 }
+// Quiz Data with Question Images
+// 🔹 Quiz Data with Question Images
+const quizData = [
+
+    {
+        question: "What event/ocassion was this Amul ad made for ?",
+        image: "amul.png",
+        
+    },
+        {
+        question: "Who are these people ?",
+        image: "men.jpeg",
+        
+    },
+        {
+        question: "Who is the Author of this book ?",
+        image: "book.jpeg",
+        
+    },
+    
+    {
+        question: "Which city is the Starbucks in ?",
+        image: "starbucks.png",
+        
+    },
+    {
+        question: "Guess the Brand ?",
+        image: "gum.mp4",
+        
+    },
+    {
+        question: "Guess the Brand ?",
+        image: "kj.mp4",
+        
+    },
+        {
+        question: "Guess the Brand ?",
+        image: "colgate.mp4",
+        
+    },
+    {
+        question: "What is common in these restaurants ?",
+        image: "crab.jpeg",
+        
+    }
+    
+];
+
+let currentQuestionIndex = 0;
+//let isBuzzerActive = true; // Change this if needed
+
+// 🔹 Initialize Quiz
+window.onload = function () {
+    showQuestion(currentQuestionIndex);
+    updateButtons();
+};
+
+// 🔹 Show Question & Options
+function showQuestion(index) {
+    const question = quizData[index];
+
+    document.getElementById("questionImage").src = question.image;
+    document.querySelector(".question-text").textContent = question.question;
+    document.querySelector(".question-number").textContent = `Question ${index + 1}/${quizData.length}`;
+
+
+    const mediaElement = document.getElementById("questionImage");
+    mediaElement.parentNode.replaceChild(createMediaElement(question.image), mediaElement);
+
+    updateButtons();
+
+    // 🔹 Create Image or Video Element
+function createMediaElement(source) {
+    if (source.endsWith(".mp4")) {
+        const video = document.createElement("video");
+        video.src = source;
+        video.controls = true;
+        video.id = "questionImage"; // Ensure we preserve the ID
+        // ✅ Increase video size
+        video.style.width = "800px";  // Set desired width
+        video.style.height = "450px"; // Set desired height (optional)
+        video.style.borderRadius = "12px";
+        video.style.border = "2px solid var(--accent-color)";
+        return video;
+    } else {
+        const img = document.createElement("img");
+        img.src = source;
+        img.id = "questionImage"; // Ensure we preserve the ID
+        return img;
+    }
+}
+
+ 
+
+    updateButtons();
+}
+
+// 🔹 Next & Previous Buttons
+function nextQuestion() {
+    if (currentQuestionIndex < quizData.length - 1) {
+        currentQuestionIndex++;
+        showQuestion(currentQuestionIndex);
+    }
+}
+
+function prevQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        showQuestion(currentQuestionIndex);
+    }
+}
+
+// 🔹 Update Next/Prev Button States
+function updateButtons() {
+    const prevBtn = document.querySelector(".prev-btn");
+    const nextBtn = document.querySelector(".next-btn");
+
+    if (prevBtn) prevBtn.disabled = currentQuestionIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentQuestionIndex === quizData.length - 1;
+}
