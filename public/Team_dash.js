@@ -1,53 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2a2f55">
-    <link rel="shortcut icon" href="bell.png" type="image/x-icon">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <link rel="stylesheet" href="Team_dash.css">
-</head>
-
-<body>
-
-    <!-- Navbar 
-    <div class="navbar">
-        <span id="teamNameDisplay">Team Dashboard</span>
-        <button class="logout-button" onclick="logout()">Logout</button>
-    </div> -->
-    <div class="background">
-        <nav class="navbar">
-            <div class="teamName" id="teamNameDisplay"></div>
-            <div class="hamburger" id="hamburger">
-                <div class="line1"></div>
-                <div class="line2"></div>
-                <div class="line3"></div>
-            </div>
-            <ul class="nav-links" id="navLinks">
-                <li><button class="join-button" onclick="logout()">Logout</button></li>
-            </ul>
-        </nav>
-    <!-- Buzzer Section
-    <div class="buzzer-container">
-        <h1>Press the Buzzer!</h1>
-        <button id="buzzer" class="buzzer-btn" onclick="pressBuzzer()" disabled>🔔 Buzz!</button>
-        <p id="buzzerStatus">Waiting for admin to activate...</p>
-        <div id="stopwatch">⏱️ 0 ms</div>
-    </div>-->
-    <div class="buzzer-container">
-        <div class="buzzer-base">
-            <div class="buzzer-button">
-                <button id="buzzer" class="buzzer-btn" onclick="pressBuzzer()" disabled>🔔 Buzz!</button>
-            </div>
-        </div>
-        <h1>Press the <span class="highlight">Buzzer</span>!</h1>
-        <p id="buzzerStatus">Waiting for admin to activate...</p>
-        <div id="stopwatch">⏱️ 0 ms</div>
-    </div>
-    
-    <script>
         // ✅ Initialize Socket.io (Local or Deployed Environment)
         const socket = io(
             window.location.hostname === 'localhost'
@@ -56,8 +6,8 @@
         );
 
         // ✅ Fetch Team Data from Session Storage
-        const teamName = sessionStorage.getItem('teamName') || "Team_X ";
-        document.getElementById('teamNameDisplay').textContent = `Team: ${teamName} `;
+        const teamName = sessionStorage.getItem('teamName') || "Team_X ✅";
+        document.getElementById('teamNameDisplay').textContent = `Team: ${teamName} ✅`;
 
         // Stopwatch Variables
 let buzzerPressed = false;
@@ -117,26 +67,13 @@ socket.on("deactivateBuzzer", () => {
     document.getElementById("buzzer").disabled = true;
     document.getElementById("buzzerStatus").textContent = "❌ Buzzer Deactivated by Admin!";
 });
-// ✅ Toggle Mobile Menu
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.getElementById('navLinks');
 
-hamburger.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
-    hamburger.classList.toggle('toggle');
-});
 
-function closeMenu() {
-    navLinks.classList.remove('open');
-    hamburger.classList.remove('toggle');
-}
-
-// 🔒 Logout Function
-function logout() {
-    sessionStorage.clear();
-    window.location.href = 'index.html';
-}
-
+        // 🔒 Logout Function
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
         // 🔄 Listen for leaderboard updates from the server
 // 🔄 Listen for leaderboard updates from the server
 socket.on("updateLeaderboard", (leaderboard) => {
@@ -151,9 +88,14 @@ socket.on("updateLeaderboard", (leaderboard) => {
 });
 // 🔄 Listen for position update from the server
 // Listen for your position and update the UI
-socket.on('yourPosition', (position) => {
-    document.getElementById('buzzerStatus').textContent = `🎉 Your Position: ${position}`;
+// ✅ Listen for yourPosition event and display it
+socket.on("yourPosition", (data) => {
+    console.log("📊 Position Received:", data);
+    if (data.teamName === teamName) {
+        document.getElementById('buzzerStatus').textContent = `🎉 Your Position: ${data.position}`;
+    }
 });
-    </script>
-</body>
-</html>
+
+
+
+

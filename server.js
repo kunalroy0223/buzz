@@ -1,7 +1,6 @@
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { performance } = require('perf_hooks');
 
 const PORT = process.env.PORT || 3000;
 
@@ -41,19 +40,19 @@ io.on('connection', (socket) => {
     io.emit('updateConnectedTeams', Array.from(connectedTeams.values()));
   });
 
-  // 🛎️ Handle buzzer press (if active)
+  // 🛎️ Handle buzzer press (use client's timestamp)
   socket.on('buzzerPressed', (data) => {
     if (!buzzerActive) return; // Ignore if buzzer inactive
 
-    const { teamName } = data;
-    const timestamp = performance.now();
-    const buzzerEntry = { teamName, timestamp: timestamp.toFixed(4) };
+    const { teamName, timestamp } = data;
+    const buzzerEntry = { teamName, timestamp: parseFloat(timestamp).toFixed(4) };
 
-    buzzerData.push(buzzerEntry);
-    console.log(`🚨 Buzzer Pressed by ${teamName} at ${timestamp.toFixed(4)} ms`);
-
-    // Emit buzzer event to all clients (teams & admin)
-    io.emit('buzzerUpdate', buzzerEntry);
+    // Prevent duplicate entries
+    if (!buzzerData.some((entry) => entry.teamName === teamName)) {
+      buzzerData.push(buzzerEntry);
+      console.log(`🚨 Buzzer Pressed by ${teamName} at ${buzzerEntry.timestamp} ms`);
+      io.emit('buzzerUpdate', buzzerEntry); // Broadcast to admin and teams
+    }
   });
 
   // 🔄 Admin: Reset Buzzer
