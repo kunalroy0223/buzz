@@ -84,6 +84,8 @@ let buzzerPressed = false;
 
     // 🛎️ Handle Buzzer Press (Send Directly to Admin via Socket.io)
     function pressBuzzer() {
+        const buzzerSound = new Audio('buzz.wav');
+        buzzerSound.play();
         if (buzzerPressed) return;
         buzzerPressed = true;
         const exactTime = currentDisplayedTime;
